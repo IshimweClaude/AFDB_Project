@@ -5,7 +5,7 @@ from authentication.models import Country,Applicant
 
 
 class CountrySerializer(serializers.ModelSerializer):
-    country = serializers.SlugRelatedField(slug_field='country',queryset=Country.objects.all())
+    country = serializers.SlugRelatedField(slug_field='country_name',queryset=Country.objects.all())
     class Meta:
         model = Country
         fields = "__all__"
