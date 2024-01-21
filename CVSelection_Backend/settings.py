@@ -150,7 +150,7 @@ EMAIL_PORT = 587
 #     "http://localhost:3000",
 #     "http://localhost:8000",
 # ]
-CORS_ALLOW_ALL_ORIGINS: True
+CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_METHODS = (
     "DELETE",
