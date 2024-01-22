@@ -69,7 +69,7 @@ orjson==3.9.10
 packaging==23.2
 pandas==2.1.4
 pdfminer==20191125
-pdfminer.six==20200726
+pdfminer.six
 Pillow==10.1.0
 preshed==3.0.9
 psycopg2==2.9.9
