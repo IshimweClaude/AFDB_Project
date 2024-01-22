@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 import dj_database_url
+import datetime
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,10 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'drf_yasg',
     'rest_framework',
+    'rest_framework_simplejwt',
     'authentication',
     'JobApplication',
     'django_filters',
     'corsheaders',
+    
 ]
 
 AUTH_USER_MODEL = 'authentication.User'
@@ -50,8 +53,8 @@ AUTH_USER_MODEL = 'authentication.User'
 MIDDLEWARE = [
     
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -96,6 +99,11 @@ DATABASES = {
     # }
 }
 
+# SIMPLE_JWT = {
+#     'ACCESS_TOKEN_LIFETIME':  datetime.timedelta(minutes=5),
+#     'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=1),
+# }
+
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
 
@@ -114,12 +122,34 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-REST_FRAMEWORK = {
-    'NON_FIELD_ERRORS_KEY': 'error',
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'authentication.jwtConf.JWTAuthentication',
+# REST_FRAMEWORK = {
+#     'NON_FIELD_ERRORS_KEY': 'error',
+#     'DEFAULT_AUTHENTICATION_CLASSES': [
+#         'authentication.jwtConf.JWTAuthentication',
 
-    ]
+#     ]
+# }
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    # 'DEFAULT_PERMISSION_CLASSES': [
+    #     'rest_framework.permissions.IsAuthenticated',
+    # ],
+}
+
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=2),
+    'SIGNING_KEY': SECRET_KEY,
+    'ALGORITHM': 'HS256',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
 # Internationalization
@@ -144,8 +174,7 @@ EMAIL_PORT = 587
 
 # cors
 
-# CORS_ALLOWED_ORIGINS =
-# [
+# CORS_ALLOWED_ORIGINS = [
 
 #     "http://localhost:3000",
 #     "http://localhost:8000",
