@@ -96,7 +96,7 @@ class JobCreateView(APIView):
     filterset_fields = ['id','title','location','status','job_type','id','salary','postedDate','deadline']
     search_fields = ['id','title','location','status','job_type','id','salary','postedDate','deadline']
 
-    def post(self, requestz):
+    def post(self, request):
         if request.user.user_role != 'recruiter':
             return Response({"detail": "Sorry, only recruiters can add new jobs."}, status=status.HTTP_403_FORBIDDEN)
 
