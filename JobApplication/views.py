@@ -16,6 +16,7 @@ from django.utils.decorators import method_decorator
 from authentication.models import Applicant
 from django.core.exceptions import ObjectDoesNotExist
 from authentication.models import User
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class CountryCreateView(APIView):
@@ -88,6 +89,8 @@ class CountryDetailView(RetrieveUpdateDestroyAPIView):
 
 # Record AFDB jobs
 class JobCreateView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+    
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
     filterset_fields = ['id','title','location','status','job_type','id','salary','postedDate','deadline']
