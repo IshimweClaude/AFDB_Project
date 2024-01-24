@@ -89,7 +89,7 @@ class CountryDetailView(RetrieveUpdateDestroyAPIView):
 
 # Record AFDB jobs
 class JobCreateView(APIView):
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = (MultiPartParser, FormParser)
     
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
