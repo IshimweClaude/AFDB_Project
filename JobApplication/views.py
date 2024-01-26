@@ -269,9 +269,9 @@ class JobApplicationView(APIView):
         if job.deadline < timezone.now().date():
             return Response({"detail": "Job application deadline has passed."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Check if the user is an applicant
-        if request.user.user_role != 'applicant':
-            return Response({"detail": "Sorry, only applicants can apply for jobs."}, status=status.HTTP_403_FORBIDDEN)
+        # # Check if the user is an applicant
+        # if request.user.user_role != 'applicant':
+        #     return Response({"detail": "Sorry, only applicants can apply for jobs."}, status=status.HTTP_403_FORBIDDEN)
 
         # Create the application
         application_data = request.data.copy()
