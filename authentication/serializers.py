@@ -59,8 +59,8 @@ class LoginSerializer(serializers.ModelSerializer):
         model = User
 
         fields = ['email', 'password',
-                  'user_role', 'first_name', 'last_name']
-        read_only_fields = ['user_role', 'first_name', 'last_name']
+                  'user_role', 'first_name', 'last_name','id']
+        read_only_fields = ['user_role', 'first_name', 'last_name','id']
 
 class EmailVerificationSerializer(serializers.ModelSerializer):
     token = serializers.CharField(max_length=555)
