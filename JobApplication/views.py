@@ -257,8 +257,8 @@ class JobDetailView(RetrieveUpdateDestroyAPIView):
 #             return Response({"message": "No language skills found."}, status=status.HTTP_404_NOT_FOUND)
         
 class JobApplicationView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
     def post(self, request, job_id):
         # Check if the job exists and has not reached the deadline
         try:
@@ -387,7 +387,7 @@ class JobApplicationView(APIView):
 # ========================================================================================================
 class JobApplicationListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-
+    
     def get(self, request):
         if request.user.user_role != 'recruiter':
             return Response({"detail": "Sorry, only recruiters can view job applications."}, status=status.HTTP_403_FORBIDDEN)
