@@ -255,7 +255,7 @@ class JobDetailView(RetrieveUpdateDestroyAPIView):
 #             return Response({"message": "Language skills fetched successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
 #         else:
 #             return Response({"message": "No language skills found."}, status=status.HTTP_404_NOT_FOUND)
-        
+@csrf_exempt
 class JobApplicationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
