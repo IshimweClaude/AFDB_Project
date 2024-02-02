@@ -27,8 +27,8 @@ class Job(models.Model):
     salary = models.CharField(max_length=100, blank=True, null=True)
     status = models.CharField(max_length=100, choices=STATUS_CHOICES, default='open')
     job_type = models.CharField(max_length=100, choices=JOB_TYPE_CHOICES, default='full_time')
-    english_job_description = models.FileField(upload_to='english_job_description_file/',default=None)
-    french_job_description = models.FileField(upload_to='french_job_description_file/',default=None)
+    english_job_description = models.FileField(upload_to='english_job_description_file/',default=None,blank=True, null=True)
+    french_job_description = models.FileField(upload_to='french_job_description_file/',default=None,blank=True, null=True)
 
     class Meta:
         ordering = ['-postedDate']
@@ -163,4 +163,16 @@ class Application(models.Model):
         # unique_together = ['applicant', 'job']
 
 
-        
+class Result(models.Model):
+    applicant_id = models.CharField(max_length=255)
+    applicant_Name = models.CharField(max_length=255)
+    score = models.FloatField()
+    job_id = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f'{self.applicant_Name} applied for {self.job_id}'
+
+    class Meta:
+        ordering = ['-score']
+        db_table = 'result'
+        # unique_together = ['applicant', 'job']

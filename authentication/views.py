@@ -6,7 +6,7 @@ from requests import Response
 from rest_framework.generics import GenericAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 
 from .models import User, Country
-from .serializers import RegisterSerializer, LoginSerializer, EmailVerificationSerializer, ResetPasswordEmailRequestSerializer, SetNewPasswordSerializer, LogoutSerializer
+from .serializers import RegisterSerializer, LoginSerializer, EmailVerificationSerializer, ResetPasswordEmailRequestSerializer, SetNewPasswordSerializer
     
 from rest_framework import response, status, permissions
 from django.contrib.auth import authenticate
@@ -30,9 +30,11 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
 from .utils import Util
+from rest_framework.authtoken.models import Token
 
 from rest_framework.authentication import TokenAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
+from .models import User
 
 # Create your views here.
 
@@ -59,6 +61,7 @@ class RegisterApiView(GenericAPIView):
             user_data = authenticate(
                 email=user['email'], password=user['password'])
             token = user_data.token
+            
 
             current_site = get_current_site(request).domain
             relative_link = reverse('email-verify')
@@ -124,20 +127,6 @@ class LoginApiView(GenericAPIView):
         else:
             return response.Response({'error': 'Email is not verified'}, status=status.HTTP_401_UNAUTHORIZED)
 
-
-class LogoutAPIView(GenericAPIView):
-    serializer_class = LogoutSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def post(self, request):
-        # simply delete the token to force a login
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
 class RequestPasswordResetEmail(GenericAPIView):
     serializer_class = ResetPasswordEmailRequestSerializer
     
@@ -162,15 +151,15 @@ class RequestPasswordResetEmail(GenericAPIView):
         return response.Response({'success': 'We have sent you a link to reset your password'}, status=status.HTTP_200_OK)
 
 class PasswordTokenCheckAPIView(GenericAPIView):
-    def get(self, request, uid64, token):
+    def get(self, request, uidb64, token):
         try:
-            id=smart_str(urlsafe_base64_decode(uid64))
+            id=smart_str(urlsafe_base64_decode(uidb64))
             user = User.objects.get(id=id)
             
             if not PasswordResetTokenGenerator().check_token(user, token):
-                return Response({'error': 'Token is not valid, please request a new one'}, status=status.HTTP_401_UNAUTHORIZED)
+                return response.Response({'error': 'Token is not valid, please request a new one'}, status=status.HTTP_401_UNAUTHORIZED)
             
-            return Response ({'success':True, 'message':'Credentials Valid', 'uidb64':uid64, 'token':token}, status=status.HTTP_200_OK)
+            return response.Response ({'success':True, 'message':'Credentials Valid', 'uidb64':uidb64, 'token':token}, status=status.HTTP_200_OK)
             
         except DjangoUnicodeDecodeError as identifier:
             if not PasswordResetTokenGenerator().check_token(user):

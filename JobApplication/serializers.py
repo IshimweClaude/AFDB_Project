@@ -1,12 +1,12 @@
 from rest_framework import serializers
-from .models import Job,Formal_education,Work_experience,Language_skills,Application
+from .models import Job,Formal_education,Work_experience,Language_skills,Application,Result
 from authentication.models import Country,Applicant
 from datetime import datetime
 
 
 
 class CountrySerializer(serializers.ModelSerializer):
-    country_name = serializers.SlugRelatedField(slug_field='country_name',queryset=Country.objects.all())
+    # country_name = serializers.SlugRelatedField(slug_field='country_name',queryset=Country.objects.all())
     class Meta:
         model = Country
         fields = "__all__"
@@ -40,6 +40,11 @@ class ApplicantSerializer(serializers.ModelSerializer):
 class ApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Application
+        fields = "__all__"
+        
+class ResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Result 
         fields = "__all__"
 
 
