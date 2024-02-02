@@ -8,6 +8,7 @@ urlpatterns = [
     path('login', views.LoginApiView.as_view(), name='login'),
     path('user', views.AuthUserApiView.as_view(), name='user'),
     path('email-verify', views.VerifyEmail.as_view(), name='email-verify'),
+    # path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('logout', views.LogoutAPIView.as_view(), name='logout'),  
     path('password-reset/<uidb64>/<token>/', views.PasswordTokenCheckAPIView.as_view(), name='password-reset-confirm'),

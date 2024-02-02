@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'drf_yasg',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework.authtoken',
     'authentication',
     'JobApplication',
     'django_filters',

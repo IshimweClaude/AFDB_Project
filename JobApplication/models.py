@@ -162,5 +162,17 @@ class Application(models.Model):
         db_table = 'application'
         # unique_together = ['applicant', 'job']
 
+class Result(models.Model):
+    applicant_id = models.CharField(max_length=255)
+    applicant_Name = models.CharField(max_length=255)
+    score = models.FloatField()
+    job_id = models.CharField(max_length=255)
 
-        
+    def __str__(self):
+        return f'{self.applicant_Name} applied for {self.job_id}'
+
+    class Meta:
+        ordering = ['-score']
+        db_table = 'result'
+        # unique_together = ['applicant', 'job']
+

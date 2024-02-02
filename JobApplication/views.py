@@ -1,8 +1,8 @@
 from rest_framework import permissions, filters
 from rest_framework.views import APIView
-from rest_framework.generics import RetrieveUpdateDestroyAPIView
+from rest_framework.generics import RetrieveUpdateDestroyAPIView, ListAPIView
 from rest_framework.response import Response
-from .models import Country
+from .models import Country, Result
 from .serializers import *
 from django.utils import timezone
 from django.db import IntegrityError
@@ -16,8 +16,14 @@ from django.utils.decorators import method_decorator
 from authentication.models import Applicant
 from django.core.exceptions import ObjectDoesNotExist
 from authentication.models import User
-from rest_framework.parsers import MultiPartParser, FormParser
 
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.http import HttpResponse
+from datetime import datetime
+from reportlab.pdfgen import canvas
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from PIL import Image
 
 class CountryCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -33,12 +39,16 @@ class CountryCreateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # List all countries
-class CountryListView(APIView):
+class CountryListView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    # queryset = Country.objects.all()
+    # serializer_class = CountrySerializer
+    
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['country_name','isMemberOfAFDB','id']
     search_fields = ['country_name','isMemberOfAFDB','id']
-
+    ordering_fields = ['country_name','isMemberOfAFDB','id']
+    
     def get(self, request):
         countries = Country.objects.all()
         if countries:
@@ -55,6 +65,7 @@ class CountryDetailView(RetrieveUpdateDestroyAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['country_name','isMemberOfAFDB','id']
     search_fields = ['country_name','isMemberOfAFDB','id']
+    ordering_fields = ['country_name','isMemberOfAFDB','id']    
     
     def get(self, request, id):
         try:
@@ -109,24 +120,83 @@ class JobCreateView(APIView):
 
 # List all jobs
 
-class JobListView(APIView):
+class JobListView(ListAPIView):
+    queryset = Job.objects.all()
+    serializer_class = JobSerializer
     permission_classes = [permissions.AllowAny]
     
     filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
-    filterset_fields = ['id','title','location','status','job_type','id','salary','postedDate','deadline']
-    search_fields = ['id','title','location','status','job_type','id','salary','postedDate','deadline']
+    filterset_fields = ['id','title','location','status','job_type','salary','postedDate','deadline']
+    search_fields = ['id','title','location','status','job_type','salary','postedDate','deadline']
+    ordering_fields = ['id','title','location','status','job_type','id','salary','postedDate','deadline']
     authentication_classes = []
     
-    def get(self, request):
-        jobs = Job.objects.filter(status='open')
+def jobs_list_export_pdf(request):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] ='attachment; filename="Jobs_list'+str(datetime.now())+'.pdf"' 
+#     response['Content-Transfer-Encoding'] = 'binary'
+    jobs = Job.objects.all()
+    
+    buffer = BytesIO()
+    p = canvas.Canvas(response)
+    
+    # Get the absolute path to the 'Image' folder
+    image_folder_path = os.path.join(os.path.dirname(__file__), 'Image')
+
+    # Draw a picture using a relative path
+    image_path = os.path.join(image_folder_path, 'afdb_logo.jpeg')
+    
+    image_width = 100
+    image_height = 75
+    
+    # image_path = 'Image/afdb_logo.jpeg'
+    image = Image.open(image_path)
+    image_width, image_height = image.size
+    aspect_ratio = image_width / image_height
+    max_width = 200  # Adjust the maximum width as needed
+    image_width = min(max_width, image_width)
+    image_height = image_width / aspect_ratio
+    
+    p.drawInlineImage(image_path, 70, 670, width=image_width, height=image_height)
+
+# Calculate the height for the "Jobs List" title to center it
+    title_height = 18
+    title_y = 670 - title_height / 2  # Center the title vertically
+
+    p.setFont("Times-Roman", 18)
+    p.drawString(100, title_y, "Jobs List")
+
+    y = 580  # Adjust the starting y-coordinate as needed
+    page_height = 750  # Adjust the page height as needed
+
+    for job in jobs:
+        if y - 140 < 50:  # Check if there is enough space for the next job details
+            p.showPage()
+            y = page_height  # Reset the y-coordinate for the new page
+
+        p.setFont("Times-Roman", 12)
+        p.drawString(70, y, "Title: " + job.title)
+    
+    # Increase the spacing between title and other details
+        y -= 10
+    
+        p.drawString(70, y - 20, "Location: " + job.location)
+        p.drawString(70, y - 40, "Salary: " + job.salary)
+        p.drawString(70, y - 60, "Job Type: " + job.job_type)
+        p.drawString(70, y - 80, "Status: " + job.status)
+        p.drawString(70, y - 100, "Posted Date: " + str(job.postedDate))
+        p.drawString(70, y - 120, "Deadline: " + str(job.deadline))
+
+    # Draw a line to separate jobs
+        p.line(70, y - 140, 550, y - 140)
+
+    # Update the y-coordinate for the next job details
+        y -= 160
+
+    p.showPage()
+    p.save()
+    return response
         
-        if jobs:
-            serializer = JobSerializer(jobs, many=True)
-            return Response({"message": "Jobs fetched successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
-        else:
-            return Response({"message": "No jobs found."}, status=status.HTTP_404_NOT_FOUND)
-
-
 class JobDetailView(RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
     queryset = Job.objects.all()
@@ -255,6 +325,7 @@ class JobDetailView(RetrieveUpdateDestroyAPIView):
 #             return Response({"message": "Language skills fetched successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
 #         else:
 #             return Response({"message": "No language skills found."}, status=status.HTTP_404_NOT_FOUND)
+
 # @csrf_exempt
 class JobApplicationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -385,9 +456,15 @@ class JobApplicationView(APIView):
 
         return Response({"message": "Applicant Info updated successfully!"}, status=status.HTTP_200_OK)
 # ========================================================================================================
-class JobApplicationListView(APIView):
+
+class JobApplicationListView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['id','applicant_id','job_id','date_applied','cv','status','cover_letter']
+    search_fields = ['id','applicant_id','job_id','date_applied','cv','status','cover_letter']
+    ordering_fields = ['id','applicant_id','job_id','date_applied','cv','status','cover_letter']
+
     def get(self, request):
         if request.user.user_role != 'recruiter':
             return Response({"detail": "Sorry, only recruiters can view job applications."}, status=status.HTTP_403_FORBIDDEN)
@@ -399,18 +476,99 @@ class JobApplicationListView(APIView):
         else:
             return Response({"message": "No job applications found."}, status=status.HTTP_404_NOT_FOUND)
         
-class JobApplicationListViewById(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def get(self, request, id):
-        if request.user.user_role != 'recruiter':
-            return Response({"detail": "Sorry, only recruiters can view job applications."}, status=status.HTTP_403_FORBIDDEN)
+# class JobApplicationListViewById(ListAPIView):
+#     permission_classes = [permissions.IsAuthenticated]
+    
+#     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+#     filterset_fields = ['id','applicant_id','job_id','date_applied','cv','status','cover_letter']
+#     search_fields = ['id','applicant_id','job_id','date_applied','cv','status','cover_letter']
+#     ordering_fields = ['id','applicant_id','job_id','date_applied','cv','status','cover_letter']
 
-        try:
-            application = Application.objects.get(id=id)
-        except Application.DoesNotExist:
-            return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = ApplicationSerializer(application)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+#     def get(self, request, id):
+#         if request.user.user_role != 'recruiter':
+#             return Response({"detail": "Sorry, only recruiters can view job applications."}, status=status.HTTP_403_FORBIDDEN)
+
+#         try:
+#             application = Application.objects.get(id=id)
+#         except Application.DoesNotExist:
+#             return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
+#         serializer = ApplicationSerializer(application)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+def applications_list_export_pdf(request):
+    # permission_classes = [permissions.IsAuthenticated]
+    
+    # if request.user.user_role != 'recruiter':
+    #         return Response({"detail": "Sorry, only Recruiter can view All Applications Received."}, status=status.HTTP_403_FORBIDDEN)
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] ='attachment; filename="applications_list'+str(datetime.now())+'.pdf"' 
+#     response['Content-Transfer-Encoding'] = 'binary'
+    applications = Application.objects.all()
+    
+    buffer = BytesIO()
+    p = canvas.Canvas(response)
+    
+    # Get the absolute path to the 'Image' folder
+    image_folder_path = os.path.join(os.path.dirname(__file__), 'Image')
+
+    # Draw a picture using a relative path
+    image_path = os.path.join(image_folder_path, 'afdb_logo.jpeg')
+    
+    image_width = 100
+    image_height = 75
+    
+    # image_path = 'Image/afdb_logo.jpeg'
+    image = Image.open(image_path)
+    image_width, image_height = image.size
+    aspect_ratio = image_width / image_height
+    max_width = 200  # Adjust the maximum width as needed
+    image_width = min(max_width, image_width)
+    image_height = image_width / aspect_ratio
+    
+    p.drawInlineImage(image_path, 70, 670, width=image_width, height=image_height)
+
+# Calculate the height for the "Jobs List" title to center it
+    title_height = 18
+    title_y = 670 - title_height / 2  # Center the title vertically
+
+    p.setFont("Times-Roman", 18)
+    number_of_applications = len(applications)
+    p.drawString(150, title_y, "Applications List") 
+    p.setFont("Times-Roman", 12)
+    p.drawString(70, title_y-20, "Total Number of Applications Received:" + str(number_of_applications))
+    y = 580  # Adjust the starting y-coordinate as needed
+    page_height = 750  # Adjust the page height as needed
+   
+    for application in applications:
+        if y - 140 < 50:  # Check if there is enough space for the next job details
+            p.showPage()
+            y = page_height  # Reset the y-coordinate for the new page
+
+        p.setFont("Times-Roman", 12)
+            
+    # Increase the spacing between title and other details
+        y -= 5
+    
+        p.drawString(70, y, "Application ID: " + str(application.id))
+        p.drawString(70, y - 20, "Applicant ID: " + str(application.applicant))
+        p.drawString(70, y - 40, "Date Applied: " + str(application.date_applied))
+        p.drawString(70, y - 60, "Status: " + application.status)
+        p.drawString(70, y - 80, "CV: " + str(application.cv))
+        p.drawString(70, y - 100, "Coverletter: " + str(application.cover_letter))
+        p.drawString(70, y - 120, "Job ID Applied for: " + str(application.job_id))
+
+    # Draw a line to separate jobs
+        p.line(70, y - 140, 550, y - 140)
+
+    # Update the y-coordinate for the next job details
+        y -= 160
+
+    p.showPage()
+    p.save()
+    return response
+    
 # ===================================================
 
 class JobApplicationDetailView(RetrieveUpdateDestroyAPIView):
@@ -452,12 +610,15 @@ class JobApplicationDetailView(RetrieveUpdateDestroyAPIView):
         job_application.delete()
         return Response({"message": "Job application deleted successfully!"}, status=status.HTTP_200_OK)
 
-
-
 # Formal Education List
 # ==========================
-class FormalEducationListView(APIView):
+class FormalEducationListView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['id','institution','degree','subject','grade','applicant_id','country_id']
+    search_fields = ['id','applicant_id','job_id','date_applied','cv','status','cover_letter']
+    ordering_fields = ['id','applicant_id','job_id','date_applied','cv','status','cover_letter']
 
     def get(self, request):
         if request.user.user_role != 'applicant':
@@ -513,8 +674,13 @@ class FormalEducationDetailView(RetrieveUpdateDestroyAPIView):
     
 # # Work Experince List
 # ====================================
-class WorkExperienceListView(APIView):
+class WorkExperienceListView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['company_name','position','applicant_id','working_country_id','industry','job_title','description']
+    search_fields = ['company_name','position','applicant_id','working_country_id','industry','job_title','description']
+    ordering_fields = ['company_name','position','applicant_id','working_country_id','industry','job_title','description']
 
     def get(self, request):
         if request.user.user_role != 'applicant':
@@ -570,8 +736,13 @@ class WorkExperienceDetailView(RetrieveUpdateDestroyAPIView):
 
 # # Language Skills List
 # ==========================
-class LanguageSkillsListView(APIView):
+class LanguageSkillsListView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['applicant_id','language','reading','writing','speaking']
+    search_fields = ['applicant_id','language','reading','writing','speaking']
+    ordering_fields = ['applicant_id','language','reading','writing','speaking']
 
     def get(self, request):
         if request.user.user_role != 'applicant':
@@ -628,12 +799,19 @@ class LanguageSkillsDetailView(RetrieveUpdateDestroyAPIView):
 
 # Applicant List
 # ==========================
-class ApplicantListView(APIView):
+class ApplicantListView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    
+    # queryset = Job.objects.all()
+    filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
+    filterset_fields = ['applicant_id','maritalStatus', 'address','city','currentTitle','gender', 'country_id']
+    search_fields = ['applicant_id','maritalStatus', 'address','city','currentTitle','gender', 'country_id']
+    ordering_fields = ['applicant_id','maritalStatus', 'address','city','currentTitle','gender', 'country_id']
+    authentication_classes = []
 
     def get(self, request):
-        if request.user.user_role != 'applicant':
-            return Response({"detail": "Sorry, only applicant can view Language Skills."}, status=status.HTTP_403_FORBIDDEN)
+        if request.user.user_role != 'recruiter':
+            return Response({"detail": "Sorry, only Recruiter can view Applicants list."}, status=status.HTTP_403_FORBIDDEN)
 
         applicant = Applicant.objects.filter(applicant=request.user.applicant)
         if applicant:
@@ -711,6 +889,11 @@ class ProcessResumesAPIView(APIView):
         engl_job_description = job.english_job_description.path
         fr_job_description = job.french_job_description.path
 
+        
+        results = compare_job_descriptions_and_cvs (engl_job_description, fr_job_description,cv_dict.values())
+
+
+
         # print("English Job Description: ", engl_job_description)
         # print("French Job Description: ", fr_job_description)
         # print("List of Applicant's cvs", cv_dict.keys, cv_dict.values)
@@ -722,6 +905,7 @@ class ProcessResumesAPIView(APIView):
         # print(results)
         # results['score'] = results['score'].astype(float)
         # results = results.sort_values(by=['score'], ascending=False)
+
         for result in results:
             for cv_path in cv_dict.values():
                 if cv_path == result['full_path']:
@@ -729,12 +913,115 @@ class ProcessResumesAPIView(APIView):
                     # result['score'] = result['score']
                     result['applicant_Name'] = User.objects.get(id=result['applicant_id']).first_name + " " + User.objects.get(id=result['applicant_id']).last_name
                     
+                    #save the result in the database
+                    Result.objects.create(applicant_id=result['applicant_id'], applicant_Name=result['applicant_Name'], score=result['score'], job_id=id)
+        return Response(results, status=status.HTTP_200_OK)
+
+class ApplicantResultsListView(ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    # queryset = Job.objects.all()
+    
+    filter_backends = [DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
+    filterset_fields = ['applicant_id','applicant_Name','score','job_id']
+    search_fields =  ['applicant_id','applicant_Name','score','job_id']
+    ordering_fields =  ['applicant_id','applicant_Name','score','job_id']
+    
+    def get(self, request,id):
+        if request.user.user_role != 'recruiter':
+            return Response({"detail": "Sorry, only Recruiter can view Applicants' Results."}, status=status.HTTP_403_FORBIDDEN)
+        results = Result.objects.all()
+        if results:
+            serializer = ResultSerializer(results, many=True)
+            return Response({"message": "Results fetched successfully!", "data": serializer.data}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "No Results found."}, status=status.HTTP_404_NOT_FOUND)
+def results_export_pdf(request,id):
+    # permission_classes = [permissions.IsAuthenticated]
+    
+    # if request.user.user_role != 'recruiter':
+    #         return Response({"detail": "Sorry, only Recruiter can view Applicants' Results."}, status=status.HTTP_403_FORBIDDEN)
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] ='attachment; filename="results'+str(datetime.now())+'.pdf"' 
+#     response['Content-Transfer-Encoding'] = 'binary'
+    results = Result.objects.all()
+    
+    buffer = BytesIO()
+    p = canvas.Canvas(response)
+    
+    # Get the absolute path to the 'Image' folder
+    image_folder_path = os.path.join(os.path.dirname(__file__), 'Image')
+
+    # Draw a picture using a relative path
+    image_path = os.path.join(image_folder_path, 'afdb_logo.jpeg')
+    
+    image_width = 100
+    image_height = 75
+    
+    # image_path = 'Image/afdb_logo.jpeg'
+    image = Image.open(image_path)
+    image_width, image_height = image.size
+    aspect_ratio = image_width / image_height
+    max_width = 200  # Adjust the maximum width as needed
+    image_width = min(max_width, image_width)
+    image_height = image_width / aspect_ratio
+    
+    p.drawInlineImage(image_path, 70, 670, width=image_width, height=image_height)
+
+# Calculate the height for the "Jobs List" title to center it
+    title_height = 18
+    title_y = 670 - title_height / 2  # Center the title vertically
+
+    p.setFont("Times-Roman", 18)
+    p.drawString(100, title_y, "Applicants' Resume Scores")
+
+    y = 580  # Adjust the starting y-coordinate as needed
+    page_height = 750  # Adjust the page height as needed
+
+    for result in results:
+        if y - 140 < 50:  # Check if there is enough space for the next job details
+            p.showPage()
+            y = page_height  # Reset the y-coordinate for the new page
+
+        #     # Move the image down on the new page
+        #     p.drawInlineImage(image_path, 70, y - 40, width=image_width, height=image_height)
+
+        # # Recalculate the title position on the new page
+        #     title_y = y - 40 - title_height / 2
+        #     p.setFont("Times-Roman", 18)
+        #     p.drawString(100, title_y, "Jobs List")
+
+        p.setFont("Times-Roman", 12)
+        p.drawString(70, y, "JOB ID:"+str(id) + " | JOB TITLE:" + str(Job.objects.get(id=id).title))
+    
+    # Increase the spacing between title and other details
+        y -= 10
+        # p.drawString(70, y - 20, "id:" + str(result.id))
+        p.drawString(70, y - 20, "applicant_id:" + str(result.applicant_id))
+        p.drawString(70, y - 40, "Name: " + str(result.applicant_Name))
+        p.drawString(70, y - 60, "Score" + str(result.score))
+        
+    # Draw a line to separate jobs
+        p.line(70, y - 140, 550, y - 140)
+
+    # Update the y-coordinate for the next job details
+        y -= 160
+
+    p.showPage()
+    p.save()
+    return response
+
+# C:\Users\Claude Ishimwe\Documents\Docs\Other Skills\Python Django\AFDB\CVSelection_Backend\CVSelection_Backend\application_files\annette_cv_fr.docx
+#===================================================================================================
+#====================================== AI PART ====================================================
+
         return Response(results, status=status.HTTP_200_OK)
         
 
 # C:\Users\Claude Ishimwe\Documents\Docs\Other Skills\Python Django\AFDB\CVSelection_Backend\CVSelection_Backend\application_files\annette_cv_fr.docx
 #===================================================================================================
 # =============== AI PART ===========================================================================
+
 #===================================================================================================
 
 from pdfminer.high_level import extract_text
