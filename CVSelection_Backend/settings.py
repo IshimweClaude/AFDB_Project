@@ -190,6 +190,7 @@ CORS_ALLOW_METHODS = (
     "POST",
     "PUT",
 )
+# CSRF_TRUSTED_ORIGINS = ['http://localhost:5173']
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/

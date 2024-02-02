@@ -59,8 +59,13 @@ class LoginSerializer(serializers.ModelSerializer):
         model = User
 
         fields = ['email', 'password',
+
                   'user_role', 'first_name', 'last_name', 'id']
         read_only_fields = ['id','user_role', 'first_name', 'last_name']
+
+                  'user_role', 'first_name', 'last_name','id']
+        read_only_fields = ['user_role', 'first_name', 'last_name','id']
+
 
 class EmailVerificationSerializer(serializers.ModelSerializer):
     token = serializers.CharField(max_length=555)
@@ -90,6 +95,7 @@ class SetNewPasswordSerializer(serializers.Serializer):
             token = attrs.get('token')
             uidb64 = attrs.get('uidb64')
 
+
             id=smart_str(urlsafe_base64_decode(uidb64))
             user = User.objects.get(id=id)
 
@@ -102,3 +108,35 @@ class SetNewPasswordSerializer(serializers.Serializer):
         except Exception as e:
             raise AuthenticationFailed("The reset link is invalid", 401)
         return super().validate(attrs)
+
+
+            id=smart_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(id=id)
+
+            if not PasswordResetTokenGenerator().check_token(user, token):
+                raise AuthenticationFailed("The reset link is invalid", 401)
+            user.set_password(password)
+            user.save()
+
+            return user
+        except Exception as e:
+            raise AuthenticationFailed("The reset link is invalid", 401)
+        return super().validate(attrs)
+            
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+    
+    default_error_messages = {
+        'bad_token': ('Token is expired or invalid')
+    }
+    
+    def validate(self, attrs):
+        self.token = attrs['refresh']
+        
+        return attrs
+    def save(self, **kwargs):
+        try:
+            RefreshToken(self.token).blacklist()
+        except TokenError:
+            self.fail('bad_token')
+

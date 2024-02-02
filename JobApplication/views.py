@@ -25,7 +25,6 @@ from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from PIL import Image
 
-
 class CountryCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     
@@ -330,7 +329,7 @@ class JobDetailView(RetrieveUpdateDestroyAPIView):
 # @csrf_exempt
 class JobApplicationView(APIView):
     permission_classes = [permissions.IsAuthenticated]
-
+    
     def post(self, request, job_id):
         # Check if the job exists and has not reached the deadline
         try:
@@ -341,7 +340,7 @@ class JobApplicationView(APIView):
         if job.deadline < timezone.now().date():
             return Response({"detail": "Job application deadline has passed."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Check if the user is an applicant
+        # # Check if the user is an applicant
         if request.user.user_role != 'applicant':
             return Response({"detail": "Sorry, only applicants can apply for jobs."}, status=status.HTTP_403_FORBIDDEN)
 
@@ -889,8 +888,23 @@ class ProcessResumesAPIView(APIView):
                    
         engl_job_description = job.english_job_description.path
         fr_job_description = job.french_job_description.path
+
         
         results = compare_job_descriptions_and_cvs (engl_job_description, fr_job_description,cv_dict.values())
+
+
+
+        # print("English Job Description: ", engl_job_description)
+        # print("French Job Description: ", fr_job_description)
+        # print("List of Applicant's cvs", cv_dict.keys, cv_dict.values)
+        
+        # Calling model function
+        
+        results = compare_job_descriptions_and_cvs (engl_job_description, fr_job_description,cv_dict.values())
+        # results.sort(key=lambda x: x['score'], reverse=True) 
+        # print(results)
+        # results['score'] = results['score'].astype(float)
+        # results = results.sort_values(by=['score'], ascending=False)
 
         for result in results:
             for cv_path in cv_dict.values():
@@ -1000,6 +1014,14 @@ def results_export_pdf(request,id):
 # C:\Users\Claude Ishimwe\Documents\Docs\Other Skills\Python Django\AFDB\CVSelection_Backend\CVSelection_Backend\application_files\annette_cv_fr.docx
 #===================================================================================================
 #====================================== AI PART ====================================================
+
+        return Response(results, status=status.HTTP_200_OK)
+        
+
+# C:\Users\Claude Ishimwe\Documents\Docs\Other Skills\Python Django\AFDB\CVSelection_Backend\CVSelection_Backend\application_files\annette_cv_fr.docx
+#===================================================================================================
+# =============== AI PART ===========================================================================
+
 #===================================================================================================
 
 from pdfminer.high_level import extract_text

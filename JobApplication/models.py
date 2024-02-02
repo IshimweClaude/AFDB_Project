@@ -162,7 +162,6 @@ class Application(models.Model):
         db_table = 'application'
         # unique_together = ['applicant', 'job']
 
-
 class Result(models.Model):
     applicant_id = models.CharField(max_length=255)
     applicant_Name = models.CharField(max_length=255)
@@ -176,3 +175,4 @@ class Result(models.Model):
         ordering = ['-score']
         db_table = 'result'
         # unique_together = ['applicant', 'job']
+
